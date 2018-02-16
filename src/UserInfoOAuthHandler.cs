@@ -28,34 +28,37 @@ namespace AspNet.Security.OAuth
         {
             var request = CreateUserInfoRequest(identity, properties, tokens);
 
-            var response = await Backchannel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Context.RequestAborted);
-
-            if (!response.IsSuccessStatusCode)
+            using (var response = await Backchannel.SendAsync(request, Context.RequestAborted))
             {
-                Logger.LogError("An error occurred while retrieving the user profile: the remote server " +
-                    "returned a {Status} response with the following payload: {Headers} {Body}.",
-                    /* Status: */ response.StatusCode,
-                    /* Headers: */ response.Headers.ToString(),
-                    /* Body: */ await response.Content.ReadAsStringAsync());
+                var json = await response.Content.ReadAsStringAsync();
 
-                throw new HttpRequestException("An error occurred while retrieving the user profile.");
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.LogError("An error occurred while retrieving the user profile: the remote server " +
+                        "returned a {Status} response with the following payload: {Headers} {Body}.",
+                        /* Status: */ response.StatusCode,
+                        /* Headers: */ response.Headers.ToString(),
+                        /* Body: */ json);
+
+                    throw new HttpRequestException("An error occurred while retrieving the user profile.");
+                }
+
+                var principal = new ClaimsPrincipal(identity);
+
+                var payload = GetPayload(JObject.Parse(json));
+
+                var context = new OAuthCreatingTicketContext(principal, properties, Context, Scheme, Options, Backchannel, tokens, payload);
+
+                var userData = GetUserData(payload);
+
+                context.RunClaimActions(userData);
+
+                await BeforeCreatingTicket(context);
+
+                await Events.CreatingTicket(context);
+
+                return new AuthenticationTicket(context.Principal, context.Properties, Scheme.Name);
             }
-
-            var principal = new ClaimsPrincipal(identity);
-
-            var payload = GetPayload(JObject.Parse(await response.Content.ReadAsStringAsync()));
-
-            var context = new OAuthCreatingTicketContext(principal, properties, Context, Scheme, Options, Backchannel, tokens, payload);
-
-            var userData = GetUserData(payload);
-
-            context.RunClaimActions(userData);
-
-            await BeforeCreatingTicket(context);
-
-            await Events.CreatingTicket(context);
-
-            return new AuthenticationTicket(context.Principal, context.Properties, Scheme.Name);
         }
 
         protected virtual HttpRequestMessage CreateUserInfoRequest(ClaimsIdentity identity, AuthenticationProperties properties, OAuthTokenResponse tokens)
