@@ -20,4 +20,9 @@
     <RepositoryUrl>git://github.com/aspnet-contrib/AspNet.Security.OAuth.Providers</RepositoryUrl>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="../UserInfoOAuthHandler.cs">
+      <Link>UserInfoOAuthHandler.cs</Link>
+    </Compile>
+  </ItemGroup>
 </Project>
