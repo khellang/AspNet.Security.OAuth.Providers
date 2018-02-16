@@ -21,7 +21,7 @@ using Newtonsoft.Json.Linq;
 
 namespace AspNet.Security.OAuth.StackExchange
 {
-    public class StackExchangeAuthenticationHandler : OAuthHandler<StackExchangeAuthenticationOptions>
+    public class StackExchangeAuthenticationHandler : UserInfoOAuthHandler<StackExchangeAuthenticationOptions>
     {
         public StackExchangeAuthenticationHandler(
             [NotNull] IOptionsMonitor<StackExchangeAuthenticationOptions> options,
@@ -32,8 +32,7 @@ namespace AspNet.Security.OAuth.StackExchange
         {
         }
 
-        protected override async Task<AuthenticationTicket> CreateTicketAsync([NotNull] ClaimsIdentity identity,
-            [NotNull] AuthenticationProperties properties, [NotNull] OAuthTokenResponse tokens)
+        protected override HttpRequestMessage CreateUserInfoRequest(ClaimsIdentity identity, AuthenticationProperties properties, OAuthTokenResponse tokens)
         {
             var address = QueryHelpers.AddQueryString(Options.UserInformationEndpoint, new Dictionary<string, string>
             {
@@ -43,28 +42,15 @@ namespace AspNet.Security.OAuth.StackExchange
             });
 
             var request = new HttpRequestMessage(HttpMethod.Get, address);
+
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            var response = await Backchannel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Context.RequestAborted);
-            if (!response.IsSuccessStatusCode)
-            {
-                Logger.LogError("An error occurred while retrieving the user profile: the remote server " +
-                                "returned a {Status} response with the following payload: {Headers} {Body}.",
-                                /* Status: */ response.StatusCode,
-                                /* Headers: */ response.Headers.ToString(),
-                                /* Body: */ await response.Content.ReadAsStringAsync());
+            return request;
+        }
 
-                throw new HttpRequestException("An error occurred while retrieving the user profile.");
-            }
-
-            var payload = JObject.Parse(await response.Content.ReadAsStringAsync());
-
-            var principal = new ClaimsPrincipal(identity);
-            var context = new OAuthCreatingTicketContext(principal, properties, Context, Scheme, Options, Backchannel, tokens, payload);
-            context.RunClaimActions(payload.Value<JObject>("items"));
-
-            await Options.Events.CreatingTicket(context);
-            return new AuthenticationTicket(context.Principal, context.Properties, Scheme.Name);
+        protected override JObject GetUserData(JObject payload)
+        {
+            return payload.Value<JObject>("items");
         }
 
         protected override async Task<OAuthTokenResponse> ExchangeCodeAsync([NotNull] string code, [NotNull] string redirectUri)

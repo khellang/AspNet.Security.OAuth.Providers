@@ -8,17 +8,15 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
 
 namespace AspNet.Security.OAuth.LinkedIn
 {
-    public class LinkedInAuthenticationHandler : OAuthHandler<LinkedInAuthenticationOptions>
+    public class LinkedInAuthenticationHandler : UserInfoOAuthHandler<LinkedInAuthenticationOptions>
     {
         public LinkedInAuthenticationHandler(
             [NotNull] IOptionsMonitor<LinkedInAuthenticationOptions> options,
@@ -29,8 +27,7 @@ namespace AspNet.Security.OAuth.LinkedIn
         {
         }
 
-        protected override async Task<AuthenticationTicket> CreateTicketAsync([NotNull] ClaimsIdentity identity,
-            [NotNull] AuthenticationProperties properties, [NotNull] OAuthTokenResponse tokens)
+        protected override HttpRequestMessage CreateUserInfoRequest(ClaimsIdentity identity, AuthenticationProperties properties, OAuthTokenResponse tokens)
         {
             var address = Options.UserInformationEndpoint;
 
@@ -42,27 +39,11 @@ namespace AspNet.Security.OAuth.LinkedIn
             }
 
             var request = new HttpRequestMessage(HttpMethod.Get, address);
+
             request.Headers.Add("x-li-format", "json");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
 
-            var response = await Backchannel.SendAsync(request, Context.RequestAborted);
-            if (!response.IsSuccessStatusCode)
-            {
-                Logger.LogError("An error occurred while retrieving the user profile: the remote server " +
-                                "returned a {Status} response with the following payload: {Headers} {Body}.",
-                                /* Status: */ response.StatusCode,
-                                /* Headers: */ response.Headers.ToString(),
-                                /* Body: */ await response.Content.ReadAsStringAsync());
-
-                throw new HttpRequestException("An error occurred while retrieving the user profile.");
-            }
-
-            var payload = JObject.Parse(await response.Content.ReadAsStringAsync());
-            var principal = new ClaimsPrincipal(identity);
-            var context = new OAuthCreatingTicketContext(principal, properties, Context, Scheme, Options, Backchannel, tokens, payload);
-            context.RunClaimActions(payload);
-
-            return new AuthenticationTicket(context.Principal, context.Properties, Scheme.Name);
+            return request;
         }
     }
 }
