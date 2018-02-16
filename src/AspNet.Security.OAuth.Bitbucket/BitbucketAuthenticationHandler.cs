@@ -30,16 +30,6 @@ namespace AspNet.Security.OAuth.Bitbucket
         {
         }
 
-        protected override HttpRequestMessage CreateUserInfoRequest(ClaimsIdentity identity, AuthenticationProperties properties, OAuthTokenResponse tokens)
-        {
-            var request = new HttpRequestMessage(HttpMethod.Get, Options.UserInformationEndpoint);
-
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
-
-            return request;
-        }
-
         protected override async Task BeforeCreatingTicket(OAuthCreatingTicketContext context)
         {
             // When the email address is not public, retrieve it from

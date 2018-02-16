@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using JetBrains.Annotations;
@@ -41,6 +42,8 @@ namespace AspNet.Security.OAuth.Foursquare
             });
 
             var request = new HttpRequestMessage(HttpMethod.Get, address);
+
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             return request;
         }

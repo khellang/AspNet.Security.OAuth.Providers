@@ -35,10 +35,7 @@ namespace AspNet.Security.OAuth.Reddit
 
         protected override HttpRequestMessage CreateUserInfoRequest(ClaimsIdentity identity, AuthenticationProperties properties, OAuthTokenResponse tokens)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, Options.UserInformationEndpoint);
-
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            request.Headers.Authorization = new AuthenticationHeaderValue("bearer", tokens.AccessToken);
+            var request = base.CreateUserInfoRequest(identity, properties, tokens);
 
             // When a custom user agent is specified in the options, add it to the request headers
             // to override the default (generic) user agent used by the OAuth2 base middleware.

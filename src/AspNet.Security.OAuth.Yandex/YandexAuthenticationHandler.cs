@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
@@ -30,16 +29,6 @@ namespace AspNet.Security.OAuth.Yandex
             [NotNull] ISystemClock clock)
             : base(options, logger, encoder, clock)
         {
-        }
-
-        protected override HttpRequestMessage CreateUserInfoRequest(ClaimsIdentity identity, AuthenticationProperties properties, OAuthTokenResponse tokens)
-        {
-            var request = new HttpRequestMessage(HttpMethod.Get, Options.UserInformationEndpoint);
-
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
-
-            return request;
         }
 
         protected override async Task<OAuthTokenResponse> ExchangeCodeAsync([NotNull] string code, [NotNull] string redirectUri)

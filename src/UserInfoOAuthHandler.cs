@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
@@ -51,7 +52,15 @@ namespace AspNet.Security.OAuth
             return new AuthenticationTicket(context.Principal, context.Properties, Scheme.Name);
         }
 
-        protected abstract HttpRequestMessage CreateUserInfoRequest(ClaimsIdentity identity, AuthenticationProperties properties, OAuthTokenResponse tokens);
+        protected virtual HttpRequestMessage CreateUserInfoRequest(ClaimsIdentity identity, AuthenticationProperties properties, OAuthTokenResponse tokens)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, Options.UserInformationEndpoint);
+
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+
+            return request;
+        }
 
         protected virtual JObject GetPayload(JObject content)
         {
